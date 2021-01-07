@@ -123,9 +123,15 @@ moveBox.text.text = "0"
 attackBox.text.text = "0"
 
 player.SetInitiative()
-enemy = SpawnCreature("Goblin","ShortSword")
-eList.addEntity(enemy)
 
+enemy=[]
+maxEnemy = 2
+
+for i in range(maxEnemy):
+	enemy.append(SpawnCreature("Goblin","ShortSword"))
+	eList.addEntity(enemy[i])
+
+print(eList.list)
 maxInit = eList.maxInit()
 initiative = maxInit
 initBox = InfoBox("Init:",10,10,64,32)
@@ -133,16 +139,19 @@ initBox.text.text=str(initiative)
 
 logBox = regs.TextObject(10, SCREENHEIGHT-106, (SCREENWIDTH-20), 32)
 turnText = regs.TextObject(10,SCREENHEIGHT-74,(SCREENWIDTH-20), 32, text ="It is your turn")
+
 helpBox =regs.TextObject(10,SCREENHEIGHT-42, (SCREENWIDTH-20),32, text ="Use arrow keys to move and attack, then ENTER to end turn")
 boxes = [hpBox, initBox, logBox, helpBox, moveBox, attackBox]
 print(player.init)
 #boolean to create run-loop
 running = True
 playerTurn = False
-enemy.Turn = False
+for i in enemy:
+	i.Turn = False
 count = 0
+enemyTurn = False
 print ("gary strmod = ",player.strMod, " AC = ",player.AC)
-print("goblin strmod = ",enemy.strMod, "AC = ", enemy.AC)
+
 while running:
 	if initiative == player.init and not playerTurn:
 		playerTurn = True
@@ -161,7 +170,7 @@ while running:
 			if event.type == QUIT:
 				running = False
 				playerTurn = False
-			elif event.type == KEYDOWN:
+			if event.type == KEYDOWN:
 				if event.key == K_UP and moveOK:
 					movePos = [0,-1]
 					moved = True
@@ -176,7 +185,6 @@ while running:
 					moved = True
 				elif event.key == K_RETURN:
 					playerTurn = False
-
 				if moved == True:
 					targetPos = function.addPos(player.pos,movePos)
 					check = eList.checkPos(targetPos)
@@ -187,28 +195,28 @@ while running:
 					if type(check) == units.Creature and attackCount < 1:
 						logBox.text = str(function.Attack(player, check)[2])
 						attackCount += 1
+	for i in range(len(enemy)):
+		if not enemy[i].alive:
+			print("You killed ", enemy[i].name,"!")
+			eList.list.remove(enemy[i])
+			count += 1
+			enemy[i] = SpawnCreature("Goblin","ShortSword")
+			eList.addEntity(enemy[i])
+			enemy[i].Turn = False
 
-	if not enemy.alive:
-		print("You killed ", enemy.name,"!")
-		eList.list.remove(enemy)
-		count += 1
-		enemy = SpawnCreature("Goblin","ShortSword")
-		eList.addEntity(enemy)
-		enemy.Turn = False
+	for i in enemy:
+		if initiative == i.init and not playerTurn and not i.Turn:
+			i.Turn = True
+			i.moveCount = 0
+			i.attackCount = 0
+			i.inactive = 0
 
-
-	if initiative == enemy.init and not playerTurn and not enemy.Turn:
-		enemy.Turn = True
-		enemy.moveCount = 0
-		enemy.attackCount = 0
-		enemy.inactive = 0
-
-	if enemy.Turn:
-		basicAI(enemy)
-		pygame.time.wait(150)
-		if not player.alive:
-			print("You lost. You killed ", count, " enemies.")
-			running = False
+		if i.Turn:
+			basicAI(i)
+			pygame.time.wait(150)
+			if not player.alive:
+				print("You lost. You killed ", count, " enemies.")
+				running = False
 
 	#fill background white
 	screen.fill((255,255,255))
@@ -222,7 +230,16 @@ while running:
 		turnText.draw(screen)
 	#flip the display (updates)
 	pygame.display.flip()
-	if not (playerTurn or enemy.Turn):
+	enemyCount = 0
+	for i in enemy:
+		if i.Turn == True:
+			enemyTurn =True
+		else:
+			enemyCount += 1
+	if enemyCount == len(enemy):
+		enemyTurn = False
+
+	if not (playerTurn or enemyTurn):
 		initiative = (initiative-1)%(maxInit+1)
 		if initiative == 0: maxInit = eList.maxInit()
 		initBox.text.text = str(initiative)
