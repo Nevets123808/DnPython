@@ -1,6 +1,6 @@
 import function
 import units
-
+from tilemap_test import TileMap,Tile,Terrain
 import random
 import math
 
@@ -23,15 +23,16 @@ pygame.init()
 class EntityList:
 	def __init__(self):
 		self.list =[]
+		self.tileMap = None
 
 	def addEntity(self, entity):
 		self.list.append(entity)
 
 	def draw(self, screen):
-		screen.fill((255,255,255))
+		#screen.fill((255,255,255))
 		for i in self.list:
-			if type(i) == units.Creature:
-				i.DrawCreature(screen)
+			if type(i) == units.Creature or type(i) == units.Player:
+				i.Draw(screen)
 
 	def maxInit(self):
 		max = 0
@@ -43,6 +44,8 @@ class EntityList:
 		for i in self.list:
 			if i.pos == pos:
 				return i
+		return tileMap.getTile(pos)
+
 class InfoBox:
 	def __init__(self, label, x,y,w,h):
 		half_width = w
@@ -56,7 +59,7 @@ def SpawnCreature(name,weapon):
 	enemy = units.Creature(creature[name])
 	enemy.GetWeapon(weapons[weapon])
 	enemy.SetInitiative()
-	enemy.pos = [random.randint(0,7),random.randint(0,7)]
+	enemy.pos = [random.randint(1,6),random.randint(1,6)]
 	enemy.colour = (0,125,0)
 	return enemy
 
@@ -72,12 +75,12 @@ def basicAI(enemy):
 	targetPos = function.addPos(enemy.pos,movePos)
 	check = eList.checkPos(targetPos)
 
-	if type(check) == units.Creature and enemy.attackCount < 1:
+	if type(check) == units.Player and enemy.attackCount < 1:
 		enemy.inactive = 0
-		logBox.text=function.Attack(enemy,player)[2]
+		logBox.text=function.Attack(enemy,check)[2]
 		hpBox.text.text = str(player.HP)
 		enemy.attackCount += 1
-	elif enemy.moveCount < enemy.speed and check == None:
+	elif enemy.moveCount < enemy.speed and type(check) == Tile and check.terrain.passable :
 		inactive = 0
 		enemy.Move(movePos)
 		enemy.moveCount += 1
@@ -102,14 +105,14 @@ clock = pygame.time.Clock()
 mapHeight = 8
 mapWidth = 8
 eList = EntityList()
-
+tileMap =TileMap(mapWidth,mapHeight)
 
 #create some basic creatures and weapons
 creature = function.LoadDict("creatures.dat")
 creature.update({"Gary":["Gary",18,14,14,8,15,12,8]})
 weapons ={"ShortSword":["Shortsword",1,6]}
 
-player= units.Creature(creature["Gary"])
+player= units.Player(creature["Gary"])
 player.GetHP(8)
 player.GetWeapon(weapons["ShortSword"])
 eList.addEntity(player)
@@ -188,7 +191,7 @@ while running:
 				if moved == True:
 					targetPos = function.addPos(player.pos,movePos)
 					check = eList.checkPos(targetPos)
-					if check == None:
+					if (type(check) == Tile and check.terrain.passable):
 						player.Move(movePos)
 						moveCount += 1
 						print("Moved", moveCount, " spaces.")
@@ -220,7 +223,7 @@ while running:
 
 	#fill background white
 	screen.fill((255,255,255))
-
+	tileMap.draw(gameView)
 	#draw all objects
 	eList.draw(gameView)
 	screen.blit(gameView,(10,42))
@@ -229,6 +232,7 @@ while running:
 	if playerTurn:
 		turnText.draw(screen)
 	#flip the display (updates)
+
 	pygame.display.flip()
 	enemyCount = 0
 	for i in enemy:
