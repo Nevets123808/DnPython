@@ -1,10 +1,21 @@
 import function
 import math
 import pygame
+from pygame.locals import (
+	K_UP,
+	K_DOWN,
+	K_LEFT,
+	K_RIGHT,
+	K_ESCAPE,
+	K_RETURN,
+	K_SPACE,
+	KEYDOWN,
+	QUIT,
+)
 class Creature:
 
 	alive = True
-	pos = [0,0]
+	pos = [1,1]
 	init = 0
 	speed = 6
 
@@ -51,14 +62,46 @@ class Creature:
 	def Move(self, MoveVector):
 		for i in range(len(self.pos)):
 			self.pos[i] += MoveVector[i]
-	def DrawCreature(self,screen):
+	def Draw(self,screen):
 		surf = pygame.Surface((16,16))
 		surf.fill(self.colour)
 		rect = surf.get_rect()
-		screen.blit(surf,(self.pos[0]*16,self.pos[1]*16))
+		screen.blit(surf,(self.pos[0]*64,self.pos[1]*64))
+
+class Player(Creature):
+	pass
 
 class Weapon:
 	def __init__(self, statList):
 		self.name = statList[0]
 		self.diceNum = statList[1]
 		self.damDice = statList[2]
+class Tile:
+	def __init__(self, terrain = "Ground"):
+		self.terrain = terrain
+		self.entity = None
+
+	def ClearEntity(self):
+		self.entity = None
+
+	def Draw(self,screen):
+
+		if not type(self.entity)== None:
+			self.entity.Draw(screen)
+
+class TileMap:
+	def __init__(self, Height, Width):
+		self.map = []
+		for i in range(width):
+			self.map.append([])
+			for ii in range(height):
+				self.map[i].append(Tile())
+
+	def GetTile(self, pos):
+		return self.map[pos[0]][pos[1]]
+
+
+	def Draw(self, screen):
+		for i in self.map:
+			for ii in self.map[i]:
+				ii.Draw(screen)
