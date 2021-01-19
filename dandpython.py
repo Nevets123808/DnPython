@@ -19,7 +19,9 @@ from pygame.locals import (
 	KEYDOWN,
 	QUIT,
 )
+
 pygame.init()
+
 class EntityList:
 	def __init__(self):
 		self.list =[]
@@ -56,7 +58,7 @@ class InfoBox:
 		self.text.draw(screen)
 
 def SpawnCreature(name,weapon):
-	enemy = units.Creature(creature[name])
+	enemy = units.Creature(creature[name], img ="Goblin_0.1.png")
 	enemy.GetWeapon(weapons[weapon])
 	enemy.SetInitiative()
 	enemy.pos = [random.randint(1,6),random.randint(1,6)]
@@ -71,6 +73,7 @@ def basicAI(enemy):
 		movePos =[0,(target[1]/abs(target[1]))]
 	else:
 		enemy.Turn = False
+		enemy.acted = True
 		return
 	targetPos = function.addPos(enemy.pos,movePos)
 	check = eList.checkPos(targetPos)
@@ -86,6 +89,7 @@ def basicAI(enemy):
 		enemy.moveCount += 1
 	elif enemy.inactive >= 3:
 		enemy.Turn = False
+		enemy.acted = True
 		print("End of Turn")
 	else:
 		enemy.inactive+=1 
@@ -112,7 +116,7 @@ creature = function.LoadDict("creatures.dat")
 creature.update({"Gary":["Gary",18,14,14,8,15,12,8]})
 weapons ={"ShortSword":["Shortsword",1,6]}
 
-player= units.Player(creature["Gary"])
+player= units.Player(creature["Gary"], img = "player_0.1.png")
 player.GetHP(8)
 player.GetWeapon(weapons["ShortSword"])
 eList.addEntity(player)
@@ -154,13 +158,13 @@ for i in enemy:
 count = 0
 enemyTurn = False
 print ("gary strmod = ",player.strMod, " AC = ",player.AC)
-
+print ("Turn = ", player.Turn)
 while running:
-	if initiative == player.init and not playerTurn:
-		playerTurn = True
+	if initiative == player.init and not (player.Turn or player.acted):
+		player.Turn = True
 		moveCount = 0
 		attackCount = 0
-	if playerTurn:
+	if player.Turn:
 		moved = False
 
 		moveBox.text.text = str(player.speed-moveCount)
@@ -172,7 +176,7 @@ while running:
 		for event in pygame.event.get():
 			if event.type == QUIT:
 				running = False
-				playerTurn = False
+				player.Turn = False
 			if event.type == KEYDOWN:
 				if event.key == K_UP and moveOK:
 					movePos = [0,-1]
@@ -187,7 +191,8 @@ while running:
 					movePos =[1,0]
 					moved = True
 				elif event.key == K_RETURN:
-					playerTurn = False
+					player.Turn = False
+					player.acted = True
 				if moved == True:
 					targetPos = function.addPos(player.pos,movePos)
 					check = eList.checkPos(targetPos)
@@ -198,6 +203,7 @@ while running:
 					if type(check) == units.Creature and attackCount < 1:
 						logBox.text = str(function.Attack(player, check)[2])
 						attackCount += 1
+
 	for i in range(len(enemy)):
 		if not enemy[i].alive:
 			print("You killed ", enemy[i].name,"!")
@@ -208,7 +214,7 @@ while running:
 			enemy[i].Turn = False
 
 	for i in enemy:
-		if initiative == i.init and not playerTurn and not i.Turn:
+		if initiative == i.init and not playerTurn and not (i.Turn or i.acted):
 			i.Turn = True
 			i.moveCount = 0
 			i.attackCount = 0
@@ -227,10 +233,13 @@ while running:
 	#draw all objects
 	eList.draw(gameView)
 	screen.blit(gameView,(10,42))
+
 	for box in boxes:
 		box.draw(screen)
-	if playerTurn:
+
+	if player.Turn:
 		turnText.draw(screen)
+
 	#flip the display (updates)
 
 	pygame.display.flip()
@@ -243,7 +252,9 @@ while running:
 	if enemyCount == len(enemy):
 		enemyTurn = False
 
-	if not (playerTurn or enemyTurn):
+	if not (player.Turn or enemyTurn):
+		for i in eList.list:
+			i.acted = False
 		initiative = (initiative-1)%(maxInit+1)
 		if initiative == 0: maxInit = eList.maxInit()
 		initBox.text.text = str(initiative)

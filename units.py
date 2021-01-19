@@ -18,7 +18,8 @@ class Creature:
 	pos = [1,1]
 	init = 0
 	speed = 6
-
+	acted = False
+	Turn = False
 	def StatMod(self,stat):
 		return math.floor((stat-10)/2)
 
@@ -31,7 +32,7 @@ class Creature:
 		self.wisMod = self.StatMod(self.wis)
 		self.chaMod = self.StatMod(self.cha)
 
-	def __init__(self, statList):
+	def __init__(self, statList, img = None):
 
 		#initialise name
 		self.name = statList[0]
@@ -50,6 +51,12 @@ class Creature:
 		self.HP = statList[7]
 
 		self.colour = (0,0,0)
+
+		if img:
+			self.img = pygame.image.load(img)
+		else:
+			self.img = None
+
 	def GetHP(self,hitDie):
 		self.hitDie = hitDie
 		self.HP = hitDie + self.conMod
@@ -63,10 +70,13 @@ class Creature:
 		for i in range(len(self.pos)):
 			self.pos[i] += MoveVector[i]
 	def Draw(self,screen):
-		surf = pygame.Surface((16,16))
-		surf.fill(self.colour)
-		rect = surf.get_rect()
-		screen.blit(surf,(self.pos[0]*64,self.pos[1]*64))
+		if self.img:
+			screen.blit(self.img,(self.pos[0]*64,(self.pos[1]-1)*64))
+		else:
+			surf = pygame.Surface((16,16))
+			surf.fill(self.colour)
+			rect = surf.get_rect()
+			screen.blit(surf,(self.pos[0]*64,self.pos[1]*64))
 
 class Player(Creature):
 	pass
