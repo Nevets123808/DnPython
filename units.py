@@ -69,7 +69,7 @@ class Creature:
 	def Move(self, MoveVector):
 		for i in range(len(self.pos)):
 			self.pos[i] += MoveVector[i]
-	def Draw(self,screen):
+	def draw(self,screen):
 		if self.img:
 			screen.blit(self.img,(self.pos[0]*64,(self.pos[1]-1)*64))
 		else:
@@ -79,13 +79,17 @@ class Creature:
 			screen.blit(surf,(self.pos[0]*64,self.pos[1]*64))
 
 class Player(Creature):
-	pass
+	def __init__(self, statList, img = None):
+		self.abilities = []
+		super().__init__(statList, img)
 
 class Weapon:
 	def __init__(self, statList):
 		self.name = statList[0]
 		self.diceNum = statList[1]
 		self.damDice = statList[2]
+		self.range = statList[3]
+
 class Tile:
 	def __init__(self, terrain = "Ground"):
 		self.terrain = terrain
