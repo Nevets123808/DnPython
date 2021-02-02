@@ -28,14 +28,14 @@ class Tile:
 	def draw(self,screen, pos):
 		self.terrain.draw(screen, pos)
 		if not self.entity == None:
-			self.entity.draw(screen, pos)
+			self.entity.draw(screen)
 
 class Terrain:
 	def __init__(self, img ="Ground.png", passable = True):
 		self.img = pygame.image.load(img)
 		self.passable = passable
 
-	def draw(self,screen, pos):
+	def draw(self,screen,pos):
 		screen.blit(self.img,(pos[0]*64,pos[1]*64))
 def main():
 	pygame.init()

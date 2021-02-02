@@ -1,5 +1,6 @@
 import function
 import units
+import ability
 from tilemap_test import TileMap,Tile,Terrain
 import random
 import math
@@ -34,7 +35,7 @@ class EntityList:
 		#screen.fill((255,255,255))
 		for i in self.list:
 			if type(i) == units.Creature or type(i) == units.Player:
-				i.Draw(screen)
+				i.draw(screen)
 
 	def maxInit(self):
 		max = 0
@@ -57,15 +58,16 @@ class InfoBox:
 		self.label.draw(screen)
 		self.text.draw(screen)
 
-def SpawnCreature(name,weapon):
+def SpawnCreature(name,weapon, tileMap):
 	enemy = units.Creature(creature[name], img ="Goblin_0.1.png")
 	enemy.GetWeapon(weapons[weapon])
 	enemy.SetInitiative()
 	enemy.pos = [random.randint(1,6),random.randint(1,6)]
+	tileMap.getTile(enemy.pos).entity = enemy
 	enemy.colour = (0,125,0)
 	return enemy
 
-def basicAI(enemy):
+def basicAI(enemy, tileMap):
 	target = function.subPos(player.pos,enemy.pos)
 	if not target[0] == 0:
 		movePos = [(target[0]/abs(target[0])),0]
@@ -85,7 +87,9 @@ def basicAI(enemy):
 		enemy.attackCount += 1
 	elif enemy.moveCount < enemy.speed and type(check) == Tile and check.terrain.passable :
 		inactive = 0
+		tileMap.getTile(enemy.pos).clearEntity()
 		enemy.Move(movePos)
+		tileMap.getTile(enemy.pos).entity = enemy
 		enemy.moveCount += 1
 	elif enemy.inactive >= 3:
 		enemy.Turn = False
@@ -114,13 +118,17 @@ tileMap =TileMap(mapWidth,mapHeight)
 #create some basic creatures and weapons
 creature = function.LoadDict("creatures.dat")
 creature.update({"Gary":["Gary",18,14,14,8,15,12,8]})
-weapons ={"ShortSword":["Shortsword",1,6]}
+weapons ={"ShortSword":["Shortsword",1,6,1]}
 
 player= units.Player(creature["Gary"], img = "player_0.1.png")
 player.GetHP(8)
 player.GetWeapon(weapons["ShortSword"])
+attack = ability.Attack(player)
+player.abilities.append(attack)
+print("Abilities = ",player.abilities)
 eList.addEntity(player)
 
+tileMap.getTile(player.pos).entity = player
 hpBox = InfoBox("HP:", 138,10,64,32)
 hpBox.text.text = str(player.HP)
 
@@ -135,7 +143,7 @@ enemy=[]
 maxEnemy = 2
 
 for i in range(maxEnemy):
-	enemy.append(SpawnCreature("Goblin","ShortSword"))
+	enemy.append(SpawnCreature("Goblin","ShortSword",tileMap))
 	eList.addEntity(enemy[i])
 
 print(eList.list)
@@ -197,19 +205,23 @@ while running:
 					targetPos = function.addPos(player.pos,movePos)
 					check = eList.checkPos(targetPos)
 					if (type(check) == Tile and check.terrain.passable):
+						tileMap.getTile(player.pos).clearEntity()
 						player.Move(movePos)
+						tileMap.getTile(player.pos).entity = player
+
 						moveCount += 1
 						print("Moved", moveCount, " spaces.")
 					if type(check) == units.Creature and attackCount < 1:
-						logBox.text = str(function.Attack(player, check)[2])
+						logBox.text = str(player.abilities[0].Use(check))
 						attackCount += 1
 
 	for i in range(len(enemy)):
 		if not enemy[i].alive:
 			print("You killed ", enemy[i].name,"!")
+			tileMap.getTile(enemy[i].pos).clearEntity()
 			eList.list.remove(enemy[i])
 			count += 1
-			enemy[i] = SpawnCreature("Goblin","ShortSword")
+			enemy[i] = SpawnCreature("Goblin","ShortSword", tileMap)
 			eList.addEntity(enemy[i])
 			enemy[i].Turn = False
 
@@ -221,7 +233,7 @@ while running:
 			i.inactive = 0
 
 		if i.Turn:
-			basicAI(i)
+			basicAI(i, tileMap)
 			pygame.time.wait(150)
 			if not player.alive:
 				print("You lost. You killed ", count, " enemies.")
@@ -231,7 +243,7 @@ while running:
 	screen.fill((255,255,255))
 	tileMap.draw(gameView)
 	#draw all objects
-	eList.draw(gameView)
+	#eList.draw(gameView)
 	screen.blit(gameView,(10,42))
 
 	for box in boxes:
