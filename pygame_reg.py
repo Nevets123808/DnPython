@@ -1,4 +1,5 @@
 import pygame
+from pygame.locals import *
 pygame.init()
 screen = pygame.display.set_mode((640,400))
 COLOUR_INERT =(30,30,30)
@@ -73,6 +74,57 @@ class Field:
 def New_Field (name, x, y):
 	return Field(name,x,y,FIELD_WIDTH,FIELD_HEIGHT)
 
+class Button (TextObject):
+	def __init__(self, x, y ,w, h, text = "", textColour = COLOUR_ACTIVE, boxColour = COLOUR_INERT, function = None, actor = None, target = None, stack = None):
+		self.function = function
+		self.actor = actor
+		self.target = target
+		self.stack = stack
+		super().__init__(x, y ,w, h, text, textColour, boxColour)
+
+	def eventHandler(self, event, actor, target, stack):
+		trig = False
+		if event.type == MOUSEBUTTONDOWN:
+			if self.rect.collidepoint(event.pos):
+				self.function(actor,target,stack)
+				trig = True
+		return trig
+
+	def draw(self,screen):
+		TextObject.draw(self, screen)
+		pygame.draw.rect(screen, self.colour, self.rect, width = 2)
+
+class Menu:
+	def __init__(self, pos):
+		self.rect = pygame.Rect(pos,(200,0))
+		self.buttons = []
+
+	def addButton(self,title, func, actor = None, target = None, stack = None):
+		button= Button(self.rect.left, self.rect.bottom, 200, 32, text=title, function = func, boxColour =(255,255,255), actor=actor, target=target, stack=stack)
+		self.buttons.append(button)
+		self.rect.height += 32
+
+	def clearButtons(self):
+		self.buttons = []
+		self.rect.height = 0
+
+	def eventHandler(self,event):
+		trig = False
+		for button in self.buttons:
+			trig = button.eventHandler(event, button.actor,button.target, button.stack)
+			if trig:
+				print ("Boo!")
+				return trig
+		if event.type == MOUSEBUTTONDOWN:
+			return True
+
+	def draw(self, screen):
+		pygame.draw.rect(screen, (125,125,125), self.rect)
+		for button in self.buttons:
+			button.draw(screen)
+def func(actor, target):
+	print ("Hello, world!")
+
 def main():
 	clock = pygame.time.Clock()
 	text_box = TextObject(50, 100,140, 16, "Hello:")
@@ -80,6 +132,10 @@ def main():
 	input_box2 = InputBox(100,300,140,16)
 	boxes = [text_box, input_box1, input_box2]
 	done =False
+	menu = Menu((100,100))
+	menu.addButton("Hello!",func)
+	menu.addButton("World!",func)
+
 
 	while not done:
 		for event in pygame.event.get():
@@ -87,15 +143,17 @@ def main():
 				done = True
 			for box in boxes:
 				box.handle_event(event)
+			menu.eventHandler(event)
 		for box in boxes:
 			box.update()
 
 		screen.fill((30,30,30))
 		for box in boxes:
 			box.draw(screen)
-
+		menu.draw(screen)
 		pygame.display.flip()
 		clock.tick(30)
+
 
 if __name__ == '__main__':
 	main()

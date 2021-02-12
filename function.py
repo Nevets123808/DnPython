@@ -57,6 +57,7 @@ def Damage(diceNum, damDice, mod = 0, resist = False):
 #This is the attack handler
 #hitMod and damMod represent any modifiers that aren't covered by ability score or proficiency 
 def Attack(attacker, defender, hitMod = 0, advantage = 0, damMod = 0, resist = False):
+	global text
 	weapon = attacker.weapon
 	print(attacker.name, " attacks ", defender.name, " with ", weapon.name,".")
 	text = str(attacker.name)+ " attacks " + str(defender.name) + " with "+ str(weapon.name)
@@ -79,6 +80,7 @@ def Attack(attacker, defender, hitMod = 0, advantage = 0, damMod = 0, resist = F
 	defender.HP -= damage
 	if (defender.HP <= 0):
 		defender.alive = False
+	attacker.text = text
 	return [attack, damage, text]
 
 def addPos(vector1, vector2):
@@ -86,10 +88,23 @@ def addPos(vector1, vector2):
 
 def subPos(vector1, vector2):
 	return ([vector1[0]-vector2[0], vector1[1] - vector2[1]])
+
+def dist(vec1,vec2):
+	return(abs(vec1[0] - vec2[0])+abs(vec1[1] - vec2[1]))
+
+def moveStep(unit,target):
+	dx = target.pos[0]-unit.pos[0]
+	dy = target.pos[1]-unit.pos[1]
+	if abs(dy) > abs(dx):
+		unit.pos[1] += (dy/abs(dy))
+	else:
+		unit.pos[0] += (dx/abs(dx))
+
+def updateLog(logBox, text):
+	logBox.text = text
+
 def main():
-	for i in range(100):
-		SkillRoll(0)
-		print("\n")
+	print (subPos((1,1),(2,1)))
 
 if __name__ == "__main__":
 	main()

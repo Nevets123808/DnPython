@@ -1,17 +1,9 @@
 import function
+from function import *
 import math
 import pygame
-from pygame.locals import (
-	K_UP,
-	K_DOWN,
-	K_LEFT,
-	K_RIGHT,
-	K_ESCAPE,
-	K_RETURN,
-	K_SPACE,
-	KEYDOWN,
-	QUIT,
-)
+from pygame.locals import *
+import pygame_reg
 class Creature:
 
 	alive = True
@@ -20,6 +12,8 @@ class Creature:
 	speed = 6
 	acted = False
 	Turn = False
+	text = None
+
 	def StatMod(self,stat):
 		return math.floor((stat-10)/2)
 
@@ -51,7 +45,7 @@ class Creature:
 		self.HP = statList[7]
 
 		self.colour = (0,0,0)
-
+		self.moveCount = 0
 		if img:
 			self.img = pygame.image.load(img)
 		else:
@@ -69,6 +63,7 @@ class Creature:
 	def Move(self, MoveVector):
 		for i in range(len(self.pos)):
 			self.pos[i] += MoveVector[i]
+
 	def draw(self,screen):
 		if self.img:
 			screen.blit(self.img,(self.pos[0]*64,(self.pos[1]-1)*64))
@@ -80,8 +75,34 @@ class Creature:
 
 class Player(Creature):
 	def __init__(self, statList, img = None):
+		self.abilityNames = []
 		self.abilities = []
+		self.menu = pygame_reg.Menu((0,0))
+		self.menu_active = False
 		super().__init__(statList, img)
+
+	def GetAbility(self, ability):
+		self.abilities.append(ability)
+		self.abilityNames.append(ability.name)
+
+	def move(self, actor, target, stack):
+		dist = function.dist(actor.pos, target.pos)
+		actor.moveCount += dist
+		stack.createAction(moveStep, actor, target, dist)
+
+	def clearMenu(self):
+		self.menu.clearButtons()
+		self.menu_active = False
+	def PopulateMenu(self,tile, stack):
+		self.menu.clearButtons()
+		self.menu.rect.left = tile.pos[0]*64
+		self.menu.rect.top = tile.pos[1]*64
+		check = False
+		if tile.moveCheck: 
+			check = True
+			self.menu.addButton("Move", self.move,self,tile, stack)
+		if check:
+			self.menu_active = True
 
 class Weapon:
 	def __init__(self, statList):
@@ -89,33 +110,3 @@ class Weapon:
 		self.diceNum = statList[1]
 		self.damDice = statList[2]
 		self.range = statList[3]
-
-class Tile:
-	def __init__(self, terrain = "Ground"):
-		self.terrain = terrain
-		self.entity = None
-
-	def ClearEntity(self):
-		self.entity = None
-
-	def Draw(self,screen):
-
-		if not type(self.entity)== None:
-			self.entity.Draw(screen)
-
-class TileMap:
-	def __init__(self, Height, Width):
-		self.map = []
-		for i in range(width):
-			self.map.append([])
-			for ii in range(height):
-				self.map[i].append(Tile())
-
-	def GetTile(self, pos):
-		return self.map[pos[0]][pos[1]]
-
-
-	def Draw(self, screen):
-		for i in self.map:
-			for ii in self.map[i]:
-				ii.Draw(screen)
