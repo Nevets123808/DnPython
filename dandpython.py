@@ -1,6 +1,8 @@
 import function
+from function import *
 import units
 import ability
+from stack import *
 from tilemap_test import TileMap,Tile,Terrain
 import random
 import math
@@ -9,20 +11,11 @@ import pygame
 import pygame_reg as regs
 
 #Import from pygame.locals for easier access to key coordinates
-from pygame.locals import (
-	K_UP,
-	K_DOWN,
-	K_LEFT,
-	K_RIGHT,
-	K_ESCAPE,
-	K_RETURN,
-	K_SPACE,
-	KEYDOWN,
-	QUIT,
-)
+from pygame.locals import *
 
 pygame.init()
-
+tile = None
+text = None
 class EntityList:
 	def __init__(self):
 		self.list =[]
@@ -45,7 +38,7 @@ class EntityList:
 
 	def checkPos(self, pos):
 		for i in self.list:
-			if i.pos == pos:
+			if list(i.pos) == pos:
 				return i
 		return tileMap.getTile(pos)
 
@@ -124,8 +117,8 @@ player= units.Player(creature["Gary"], img = "player_0.1.png")
 player.GetHP(8)
 player.GetWeapon(weapons["ShortSword"])
 attack = ability.Attack(player)
-player.abilities.append(attack)
-print("Abilities = ",player.abilities)
+player.GetAbility(attack)
+print("Abilities = ",player.abilityNames)
 eList.addEntity(player)
 
 tileMap.getTile(player.pos).entity = player
@@ -161,59 +154,87 @@ print(player.init)
 #boolean to create run-loop
 running = True
 playerTurn = False
+stack = stack()
 for i in enemy:
 	i.Turn = False
+
 count = 0
 enemyTurn = False
 print ("gary strmod = ",player.strMod, " AC = ",player.AC)
 print ("Turn = ", player.Turn)
+
 while running:
-	if initiative == player.init and not (player.Turn or player.acted):
-		player.Turn = True
-		moveCount = 0
-		attackCount = 0
-	if player.Turn:
-		moved = False
+	if len(stack.list) > 0:
+		stack.call()
+		tileMap.clearEntities()
+		for entity in eList.list:
+			tileMap.getTile(entity.pos).entity= entity
+	else:
+		if initiative == player.init and not (player.Turn or player.acted):
+			player.Turn = True
+			player.moveCount = 0
+			player.attackCount = 0
 
-		moveBox.text.text = str(player.speed-moveCount)
-		attackBox.text.text =str(1-attackCount)
+			tileMap.refreshChecks(player)
 
-		if moveCount < player.speed: moveOK = True
-		else: moveOK = False
-		#event handler
-		for event in pygame.event.get():
-			if event.type == QUIT:
-				running = False
-				player.Turn = False
-			if event.type == KEYDOWN:
-				if event.key == K_UP and moveOK:
-					movePos = [0,-1]
-					moved = True
-				elif event.key == K_DOWN and moveOK:
-					movePos = [0,1]
-					moved = True
-				elif event.key == K_LEFT and moveOK:
-					movePos =[-1,0]
-					moved = True
-				elif event.key == K_RIGHT and moveOK:
-					movePos =[1,0]
-					moved = True
-				elif event.key == K_RETURN:
+		if player.Turn:
+			moved = False
+			tileMap.refreshChecks(player)
+			moveBox.text.text = str(player.speed-player.moveCount)
+			attackBox.text.text =str(1-player.attackCount)
+
+			if player.moveCount < player.speed: moveOK = True
+			else: moveOK = False
+			#event handler
+			for event in pygame.event.get():
+				if event.type == QUIT:
+					running = False
 					player.Turn = False
-					player.acted = True
-				if moved == True:
-					targetPos = function.addPos(player.pos,movePos)
-					check = eList.checkPos(targetPos)
-					if (type(check) == Tile and check.terrain.passable):
-						tileMap.getTile(player.pos).clearEntity()
-						player.Move(movePos)
-						tileMap.getTile(player.pos).entity = player
+				if event.type == MOUSEBUTTONDOWN:
+					viewpos =(event.pos[0]-20, event.pos[1]-42)
+					if player.menu_active:
+						trig = False
+						event.pos = viewpos
+						trig = player.menu.eventHandler(event)
+						if trig:
+							player.clearMenu()
+					else:
+						tile = tileMap.checkClick(viewpos)
+						if tile and moveOK:
+							player.PopulateMenu(tile, stack)
 
-						moveCount += 1
-						print("Moved", moveCount, " spaces.")
-					if type(check) == units.Creature and attackCount < 1:
-						logBox.text = str(player.abilities[0].Use(check))
-						attackCount += 1
+				if event.type == KEYDOWN:
+					if event.key == K_UP and moveOK:
+						movePos = [0,-1]
+						moved = True
+					elif event.key == K_DOWN and moveOK:
+						movePos = [0,1]
+						moved = True
+					elif event.key == K_LEFT and moveOK:
+						movePos =[-1,0]
+						moved = True
+					elif event.key == K_RIGHT and moveOK:
+						movePos =[1,0]
+						moved = True
+					elif event.key == K_RETURN:
+						player.Turn = False
+						player.acted = True
+						tileMap.clearChecks()
+						player.clearMenu()
+					if moved == True:
+						targetPos = function.addPos(player.pos,movePos)
+						check = eList.checkPos(targetPos)
+						if (type(check) == Tile and check.terrain.passable):
+							tileMap.getTile(player.pos).clearEntity()
+							player.Move(movePos)
+							tileMap.getTile(player.pos).entity = player
+
+							player.moveCount += 1
+							print("Moved", player.moveCount, " spaces.")
+						if type(check) == units.Creature and player.attackCount < 1:
+							stack.createAction(player.abilities[0].Use, player, check,  1)
+							updateLog(logBox,player.text)
+							player.attackCount += 1
 
 	for i in range(len(enemy)):
 		if not enemy[i].alive:
@@ -234,16 +255,19 @@ while running:
 
 		if i.Turn:
 			basicAI(i, tileMap)
-			pygame.time.wait(150)
-			if not player.alive:
-				print("You lost. You killed ", count, " enemies.")
-				running = False
+		pygame.time.wait(150)
+		if not player.alive:
+			print("You lost. You killed ", count, " enemies.")
+			running = False
 
 	#fill background white
 	screen.fill((255,255,255))
+	gameView.fill((255,255,255))
 	tileMap.draw(gameView)
 	#draw all objects
 	#eList.draw(gameView)
+	if player.menu_active:
+		player.menu.draw(gameView)
 	screen.blit(gameView,(10,42))
 
 	for box in boxes:
